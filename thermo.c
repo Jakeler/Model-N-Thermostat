@@ -16,9 +16,10 @@
 #define MOTO_C7 (1 << 7)
 
 
-uint8_t count = 0, uartBufferPos = 0;
+uint16_t count = 0;
+uint8_t uartBufferPos = 0;
 char uartBuffer[UART_BUFFER_SIZE];
-bool dir = false;
+bool motorDir = false;
 
 
 void delay(uint32_t ms){
@@ -137,11 +138,23 @@ int main() {
 
             delay(100);
 
+            if (uartBuffer[0] == 'b') {
+              motorDir = false;
+              memmove(uartBuffer, uartBuffer+1, strlen(uartBuffer));
+              count = atoi(uartBuffer);
+            } else if (uartBuffer[0] == 'f') {
+              motorDir = true;
+              memmove(uartBuffer, uartBuffer+1, strlen(uartBuffer));
+              count = atoi(uartBuffer);
+            }
+            clearUartBuffer();
+
             adc = readADC();
-            printf("ADC value: %d, %d\n", readADC(), uartBufferPos);
+            printf("ADC value: %d\n", readADC());
 
             if (count > 0) {
-              setMotor(dir, !dir);
+              printf("Running %s for %d\n", (motorDir? "forward" : "backward"), count);
+              setMotor(motorDir, !motorDir);
               count--;
             } else {
               setMotor(0, 0);
