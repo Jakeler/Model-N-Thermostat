@@ -153,7 +153,7 @@ int main() {
             printf("ADC value: %d\n", readADC());
 
             if (count > 0) {
-              printf("Running %s for %d\n", (motorDir? "forward" : "backward"), count);
+              printf("Running %s for %d.%d sec\n", (motorDir? "forward" : "backward"), count/10, count%10);
               setMotor(motorDir, !motorDir);
               count--;
             } else {
