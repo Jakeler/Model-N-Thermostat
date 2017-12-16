@@ -20,12 +20,25 @@ uint16_t count = 0;
 uint8_t uartBufferPos = 0;
 char uartBuffer[UART_BUFFER_SIZE];
 bool motorDir = false;
+volatile uint32_t tim2_millis = 0;
 
+uint32_t millis() {
+  return tim2_millis;
+}
 
-void delay(uint32_t ms){
-    uint32_t ticks = ms*600/(1 << CLK_CKDIVR);
-    uint32_t d;
-    for(d = 0; d < ticks; d++) { }
+void delay_ms(uint32_t ms) {
+    uint32_t start = millis();
+    while ((millis() - start) < ms);
+}
+
+void initTIM2() {
+    // 16000 ticks
+    TIM2_ARRH = 0x3E;
+    TIM2_ARRL = 0x80;
+    //TIM2_PSCR = 0b010;
+
+    TIM2_IER |= 0x1; // Update interrupt
+    TIM2_CR1 = 0x1; // enable timer
 }
 
 
@@ -123,6 +136,8 @@ void initClock() {
 int main() {
         initClock();
 
+        initTIM2();
+
         enableInterrupts()
 
         initADC();
@@ -134,9 +149,9 @@ int main() {
         printf("Thermostat: Startup complete\n");
 
         while(true) {
-            uint16_t adc;
+            uint16_t adc, t;
 
-            delay(100);
+            delay_ms(1000);
 
             if (uartBuffer[0] == 'b') {
               motorDir = false;
@@ -150,7 +165,8 @@ int main() {
             clearUartBuffer();
 
             adc = readADC();
-            printf("ADC value: %d\n", readADC());
+            t = tim2_millis/100;
+            printf("ADC value: %d, Time: %u\n", readADC(), (uint16_t)(millis()/100));
 
             if (count > 0) {
               printf("Running %s for %d.%d sec\n", (motorDir? "forward" : "backward"), count/10, count%10);
@@ -163,6 +179,7 @@ int main() {
     }
 
     #define UART_RECV_ISR 28
+    #define TIM2_OVF_ISR 19
 
     void uart_isr() __interrupt(UART_RECV_ISR) {
         uint8_t i;
@@ -171,4 +188,9 @@ int main() {
             uartBuffer[i] = uartRead();
         }
         uartBufferPos++;
+    }
+
+    void tim2_isr() __interrupt(TIM2_OVF_ISR) {
+        TIM2_SR1 = 0;
+        tim2_millis++;
     }
