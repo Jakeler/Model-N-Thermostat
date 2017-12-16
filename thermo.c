@@ -88,12 +88,8 @@ char uartRead() {
     }
 }
 
-char* readUartBuffer() {
-    uartBufferPos = 0;
-    return uartBuffer;
-}
-
 void clearUartBuffer() {
+    uartBufferPos = 0;
     memset(uartBuffer,0,UART_BUFFER_SIZE);
 }
 
