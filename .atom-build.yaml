@@ -1,0 +1,4 @@
+cmd: "./build.sh"
+name: "Build with sdcc"
+sh: true,
+atomCommandName: builder:sdccbuild

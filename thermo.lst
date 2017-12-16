@@ -1,0 +1,636 @@
+                                      1 ;--------------------------------------------------------
+                                      2 ; File Created by SDCC : free open source ANSI-C Compiler
+                                      3 ; Version 3.6.0 #9615 (Linux)
+                                      4 ;--------------------------------------------------------
+                                      5 	.module thermo
+                                      6 	.optsdcc -mstm8
+                                      7 	
+                                      8 ;--------------------------------------------------------
+                                      9 ; Public variables in this module
+                                     10 ;--------------------------------------------------------
+                                     11 	.globl _uart_isr
+                                     12 	.globl _main
+                                     13 	.globl _initClock
+                                     14 	.globl _readADC
+                                     15 	.globl _initADC
+                                     16 	.globl _clearUartBuffer
+                                     17 	.globl _readUartBuffer
+                                     18 	.globl _uartRead
+                                     19 	.globl _uartWrite
+                                     20 	.globl _initUSART
+                                     21 	.globl _setMotor
+                                     22 	.globl _initMotor
+                                     23 	.globl _delay
+                                     24 	.globl _printf
+                                     25 	.globl _strlen
+                                     26 	.globl _memset
+                                     27 	.globl _dir
+                                     28 	.globl _uartBufferPos
+                                     29 	.globl _count
+                                     30 	.globl _uartBuffer
+                                     31 	.globl _putchar
+                                     32 ;--------------------------------------------------------
+                                     33 ; ram data
+                                     34 ;--------------------------------------------------------
+                                     35 	.area DATA
+      000000                         36 _uartBuffer::
+      000000                         37 	.ds 32
+                                     38 ;--------------------------------------------------------
+                                     39 ; ram data
+                                     40 ;--------------------------------------------------------
+                                     41 	.area INITIALIZED
+      000000                         42 _count::
+      000000                         43 	.ds 1
+      000001                         44 _uartBufferPos::
+      000001                         45 	.ds 1
+      000002                         46 _dir::
+      000002                         47 	.ds 1
+                                     48 ;--------------------------------------------------------
+                                     49 ; Stack segment in internal ram 
+                                     50 ;--------------------------------------------------------
+                                     51 	.area	SSEG
+      000000                         52 __start__stack:
+      000000                         53 	.ds	1
+                                     54 
+                                     55 ;--------------------------------------------------------
+                                     56 ; absolute external ram data
+                                     57 ;--------------------------------------------------------
+                                     58 	.area DABS (ABS)
+                                     59 ;--------------------------------------------------------
+                                     60 ; interrupt vector 
+                                     61 ;--------------------------------------------------------
+                                     62 	.area HOME
+      000000                         63 __interrupt_vect:
+      000000 82v00u00u00             64 	int s_GSINIT ;reset
+      000004 82 00 00 00             65 	int 0x0000 ;trap
+      000008 82 00 00 00             66 	int 0x0000 ;int0
+      00000C 82 00 00 00             67 	int 0x0000 ;int1
+      000010 82 00 00 00             68 	int 0x0000 ;int2
+      000014 82 00 00 00             69 	int 0x0000 ;int3
+      000018 82 00 00 00             70 	int 0x0000 ;int4
+      00001C 82 00 00 00             71 	int 0x0000 ;int5
+      000020 82 00 00 00             72 	int 0x0000 ;int6
+      000024 82 00 00 00             73 	int 0x0000 ;int7
+      000028 82 00 00 00             74 	int 0x0000 ;int8
+      00002C 82 00 00 00             75 	int 0x0000 ;int9
+      000030 82 00 00 00             76 	int 0x0000 ;int10
+      000034 82 00 00 00             77 	int 0x0000 ;int11
+      000038 82 00 00 00             78 	int 0x0000 ;int12
+      00003C 82 00 00 00             79 	int 0x0000 ;int13
+      000040 82 00 00 00             80 	int 0x0000 ;int14
+      000044 82 00 00 00             81 	int 0x0000 ;int15
+      000048 82 00 00 00             82 	int 0x0000 ;int16
+      00004C 82 00 00 00             83 	int 0x0000 ;int17
+      000050 82 00 00 00             84 	int 0x0000 ;int18
+      000054 82 00 00 00             85 	int 0x0000 ;int19
+      000058 82 00 00 00             86 	int 0x0000 ;int20
+      00005C 82 00 00 00             87 	int 0x0000 ;int21
+      000060 82 00 00 00             88 	int 0x0000 ;int22
+      000064 82 00 00 00             89 	int 0x0000 ;int23
+      000068 82 00 00 00             90 	int 0x0000 ;int24
+      00006C 82 00 00 00             91 	int 0x0000 ;int25
+      000070 82 00 00 00             92 	int 0x0000 ;int26
+      000074 82 00 00 00             93 	int 0x0000 ;int27
+      000078 82v00u02u24             94 	int _uart_isr ;int28
+      00007C 82 00 00 00             95 	int 0x0000 ;int29
+                                     96 ;--------------------------------------------------------
+                                     97 ; global & static initialisations
+                                     98 ;--------------------------------------------------------
+                                     99 	.area HOME
+                                    100 	.area GSINIT
+                                    101 	.area GSFINAL
+                                    102 	.area GSINIT
+      000000                        103 __sdcc_gs_init_startup:
+      000000                        104 __sdcc_init_data:
+                                    105 ; stm8_genXINIT() start
+      000000 AEr00r00         [ 2]  106 	ldw x, #l_DATA
+      000003 27 07            [ 1]  107 	jreq	00002$
+      000005                        108 00001$:
+      000005 72 4FuFFuFF      [ 1]  109 	clr (s_DATA - 1, x)
+      000009 5A               [ 2]  110 	decw x
+      00000A 26 F9            [ 1]  111 	jrne	00001$
+      00000C                        112 00002$:
+      00000C AEr00r00         [ 2]  113 	ldw	x, #l_INITIALIZER
+      00000F 27 09            [ 1]  114 	jreq	00004$
+      000011                        115 00003$:
+      000011 D6uFFuFF         [ 1]  116 	ld	a, (s_INITIALIZER - 1, x)
+      000014 D7uFFuFF         [ 1]  117 	ld	(s_INITIALIZED - 1, x), a
+      000017 5A               [ 2]  118 	decw	x
+      000018 26 F7            [ 1]  119 	jrne	00003$
+      00001A                        120 00004$:
+                                    121 ; stm8_genXINIT() end
+                                    122 	.area GSFINAL
+      000000 CCr00r80         [ 2]  123 	jp	__sdcc_program_startup
+                                    124 ;--------------------------------------------------------
+                                    125 ; Home
+                                    126 ;--------------------------------------------------------
+                                    127 	.area HOME
+                                    128 	.area HOME
+      000080                        129 __sdcc_program_startup:
+      000080 CCr01r98         [ 2]  130 	jp	_main
+                                    131 ;	return from main will return to caller
+                                    132 ;--------------------------------------------------------
+                                    133 ; code
+                                    134 ;--------------------------------------------------------
+                                    135 	.area CODE
+                                    136 ;	thermo.c: 24: void delay(uint32_t ms){
+                                    137 ;	-----------------------------------------
+                                    138 ;	 function delay
+                                    139 ;	-----------------------------------------
+      000000                        140 _delay:
+      000000 52 0C            [ 2]  141 	sub	sp, #12
+                                    142 ;	thermo.c: 25: uint32_t ticks = ms*600/(1 << CLK_CKDIVR);
+      000002 1E 11            [ 2]  143 	ldw	x, (0x11, sp)
+      000004 89               [ 2]  144 	pushw	x
+      000005 1E 11            [ 2]  145 	ldw	x, (0x11, sp)
+      000007 89               [ 2]  146 	pushw	x
+      000008 4B 58            [ 1]  147 	push	#0x58
+      00000A 4B 02            [ 1]  148 	push	#0x02
+      00000C 5F               [ 1]  149 	clrw	x
+      00000D 89               [ 2]  150 	pushw	x
+      00000E CDr00r00         [ 4]  151 	call	__mullong
+      000011 5B 08            [ 2]  152 	addw	sp, #8
+      000013 1F 0B            [ 2]  153 	ldw	(0x0b, sp), x
+      000015 17 09            [ 2]  154 	ldw	(0x09, sp), y
+      000017 AE 50 C0         [ 2]  155 	ldw	x, #0x50c0
+      00001A F6               [ 1]  156 	ld	a, (x)
+      00001B AE 00 01         [ 2]  157 	ldw	x, #0x0001
+      00001E 4D               [ 1]  158 	tnz	a
+      00001F 27 04            [ 1]  159 	jreq	00117$
+      000021                        160 00116$:
+      000021 58               [ 2]  161 	sllw	x
+      000022 4A               [ 1]  162 	dec	a
+      000023 26 FC            [ 1]  163 	jrne	00116$
+      000025                        164 00117$:
+      000025 90 5F            [ 1]  165 	clrw	y
+      000027 5D               [ 2]  166 	tnzw	x
+      000028 2A 02            [ 1]  167 	jrpl	00118$
+      00002A 90 5A            [ 2]  168 	decw	y
+      00002C                        169 00118$:
+      00002C 89               [ 2]  170 	pushw	x
+      00002D 90 89            [ 2]  171 	pushw	y
+      00002F 1E 0F            [ 2]  172 	ldw	x, (0x0f, sp)
+      000031 89               [ 2]  173 	pushw	x
+      000032 1E 0F            [ 2]  174 	ldw	x, (0x0f, sp)
+      000034 89               [ 2]  175 	pushw	x
+      000035 CDr00r00         [ 4]  176 	call	__divulong
+      000038 5B 08            [ 2]  177 	addw	sp, #8
+      00003A 1F 07            [ 2]  178 	ldw	(0x07, sp), x
+      00003C 17 05            [ 2]  179 	ldw	(0x05, sp), y
+                                    180 ;	thermo.c: 27: for(d = 0; d < ticks; d++) { }
+      00003E 5F               [ 1]  181 	clrw	x
+      00003F 1F 03            [ 2]  182 	ldw	(0x03, sp), x
+      000041 1F 01            [ 2]  183 	ldw	(0x01, sp), x
+      000043                        184 00103$:
+      000043 1E 03            [ 2]  185 	ldw	x, (0x03, sp)
+      000045 13 07            [ 2]  186 	cpw	x, (0x07, sp)
+      000047 7B 02            [ 1]  187 	ld	a, (0x02, sp)
+      000049 12 06            [ 1]  188 	sbc	a, (0x06, sp)
+      00004B 7B 01            [ 1]  189 	ld	a, (0x01, sp)
+      00004D 12 05            [ 1]  190 	sbc	a, (0x05, sp)
+      00004F 24 15            [ 1]  191 	jrnc	00105$
+      000051 1E 03            [ 2]  192 	ldw	x, (0x03, sp)
+      000053 1C 00 01         [ 2]  193 	addw	x, #0x0001
+      000056 1F 03            [ 2]  194 	ldw	(0x03, sp), x
+      000058 7B 02            [ 1]  195 	ld	a, (0x02, sp)
+      00005A A9 00            [ 1]  196 	adc	a, #0x00
+      00005C 6B 02            [ 1]  197 	ld	(0x02, sp), a
+      00005E 7B 01            [ 1]  198 	ld	a, (0x01, sp)
+      000060 A9 00            [ 1]  199 	adc	a, #0x00
+      000062 6B 01            [ 1]  200 	ld	(0x01, sp), a
+      000064 20 DD            [ 2]  201 	jra	00103$
+      000066                        202 00105$:
+      000066 5B 0C            [ 2]  203 	addw	sp, #12
+      000068 81               [ 4]  204 	ret
+                                    205 ;	thermo.c: 31: void initMotor() {
+                                    206 ;	-----------------------------------------
+                                    207 ;	 function initMotor
+                                    208 ;	-----------------------------------------
+      000069                        209 _initMotor:
+                                    210 ;	thermo.c: 33: PE_DDR |= MOTO_E7 | MOTO_E6;
+      000069 AE 50 16         [ 2]  211 	ldw	x, #0x5016
+      00006C F6               [ 1]  212 	ld	a, (x)
+      00006D AA C0            [ 1]  213 	or	a, #0xc0
+      00006F F7               [ 1]  214 	ld	(x), a
+                                    215 ;	thermo.c: 34: PE_CR1 |= MOTO_E7 | MOTO_E6;
+      000070 AE 50 17         [ 2]  216 	ldw	x, #0x5017
+      000073 F6               [ 1]  217 	ld	a, (x)
+      000074 AA C0            [ 1]  218 	or	a, #0xc0
+      000076 F7               [ 1]  219 	ld	(x), a
+                                    220 ;	thermo.c: 35: PE_ODR |= MOTO_E7 | MOTO_E6;
+      000077 AE 50 14         [ 2]  221 	ldw	x, #0x5014
+      00007A F6               [ 1]  222 	ld	a, (x)
+      00007B AA C0            [ 1]  223 	or	a, #0xc0
+      00007D F7               [ 1]  224 	ld	(x), a
+                                    225 ;	thermo.c: 38: PC_DDR |= MOTO_C4 | MOTO_C7;
+      00007E AE 50 0C         [ 2]  226 	ldw	x, #0x500c
+      000081 F6               [ 1]  227 	ld	a, (x)
+      000082 AA 90            [ 1]  228 	or	a, #0x90
+      000084 F7               [ 1]  229 	ld	(x), a
+                                    230 ;	thermo.c: 39: PC_CR1 |= MOTO_C4 | MOTO_C7;
+      000085 AE 50 0D         [ 2]  231 	ldw	x, #0x500d
+      000088 F6               [ 1]  232 	ld	a, (x)
+      000089 AA 90            [ 1]  233 	or	a, #0x90
+      00008B F7               [ 1]  234 	ld	(x), a
+                                    235 ;	thermo.c: 40: PC_ODR |= MOTO_C4 | MOTO_C7;
+      00008C AE 50 0A         [ 2]  236 	ldw	x, #0x500a
+      00008F F6               [ 1]  237 	ld	a, (x)
+      000090 AA 90            [ 1]  238 	or	a, #0x90
+      000092 F7               [ 1]  239 	ld	(x), a
+      000093 81               [ 4]  240 	ret
+                                    241 ;	thermo.c: 44: void setMotor(bool st1, bool st2) {
+                                    242 ;	-----------------------------------------
+                                    243 ;	 function setMotor
+                                    244 ;	-----------------------------------------
+      000094                        245 _setMotor:
+                                    246 ;	thermo.c: 45: if (st1) {
+      000094 0D 03            [ 1]  247 	tnz	(0x03, sp)
+      000096 27 09            [ 1]  248 	jreq	00102$
+                                    249 ;	thermo.c: 46: PE_ODR &= ~MOTO_E7 & ~MOTO_E6; // 3.3V
+      000098 AE 50 14         [ 2]  250 	ldw	x, #0x5014
+      00009B F6               [ 1]  251 	ld	a, (x)
+      00009C A4 3F            [ 1]  252 	and	a, #0x3f
+      00009E F7               [ 1]  253 	ld	(x), a
+      00009F 20 07            [ 2]  254 	jra	00103$
+      0000A1                        255 00102$:
+                                    256 ;	thermo.c: 48: PE_ODR |= MOTO_E7 | MOTO_E6; // 0V
+      0000A1 AE 50 14         [ 2]  257 	ldw	x, #0x5014
+      0000A4 F6               [ 1]  258 	ld	a, (x)
+      0000A5 AA C0            [ 1]  259 	or	a, #0xc0
+      0000A7 F7               [ 1]  260 	ld	(x), a
+      0000A8                        261 00103$:
+                                    262 ;	thermo.c: 50: if (st2) {
+      0000A8 0D 04            [ 1]  263 	tnz	(0x04, sp)
+      0000AA 27 08            [ 1]  264 	jreq	00105$
+                                    265 ;	thermo.c: 51: PC_ODR &= ~MOTO_C4 & ~MOTO_C7; // 3.3V
+      0000AC AE 50 0A         [ 2]  266 	ldw	x, #0x500a
+      0000AF F6               [ 1]  267 	ld	a, (x)
+      0000B0 A4 6F            [ 1]  268 	and	a, #0x6f
+      0000B2 F7               [ 1]  269 	ld	(x), a
+      0000B3 81               [ 4]  270 	ret
+      0000B4                        271 00105$:
+                                    272 ;	thermo.c: 53: PC_ODR |= MOTO_C4 | MOTO_C7; // 0V
+      0000B4 AE 50 0A         [ 2]  273 	ldw	x, #0x500a
+      0000B7 F6               [ 1]  274 	ld	a, (x)
+      0000B8 AA 90            [ 1]  275 	or	a, #0x90
+      0000BA F7               [ 1]  276 	ld	(x), a
+      0000BB 81               [ 4]  277 	ret
+                                    278 ;	thermo.c: 59: void initUSART() {
+                                    279 ;	-----------------------------------------
+                                    280 ;	 function initUSART
+                                    281 ;	-----------------------------------------
+      0000BC                        282 _initUSART:
+                                    283 ;	thermo.c: 60: SYSCFG_RMPCR1 |= 0x10; // TX: PA2, RX: PA3
+      0000BC AE 50 9E         [ 2]  284 	ldw	x, #0x509e
+      0000BF F6               [ 1]  285 	ld	a, (x)
+      0000C0 AA 10            [ 1]  286 	or	a, #0x10
+      0000C2 F7               [ 1]  287 	ld	(x), a
+                                    288 ;	thermo.c: 61: PA_DDR |= MP1;
+      0000C3 AE 50 02         [ 2]  289 	ldw	x, #0x5002
+      0000C6 F6               [ 1]  290 	ld	a, (x)
+      0000C7 AA 04            [ 1]  291 	or	a, #0x04
+      0000C9 F7               [ 1]  292 	ld	(x), a
+                                    293 ;	thermo.c: 62: PA_CR1 |= MP1;
+      0000CA AE 50 03         [ 2]  294 	ldw	x, #0x5003
+      0000CD F6               [ 1]  295 	ld	a, (x)
+      0000CE AA 04            [ 1]  296 	or	a, #0x04
+      0000D0 F7               [ 1]  297 	ld	(x), a
+                                    298 ;	thermo.c: 64: USART1_CR2 = USART_CR2_TEN | USART_CR2_REN | USART_CR2_RIEN; // Transmit, receive, interrrupt enable
+      0000D1 35 2C 52 35      [ 1]  299 	mov	0x5235+0, #0x2c
+                                    300 ;	thermo.c: 65: USART1_CR3 &= ~(USART_CR3_STOP1 | USART_CR3_STOP2); // 1 stop bit
+      0000D5 AE 52 36         [ 2]  301 	ldw	x, #0x5236
+      0000D8 F6               [ 1]  302 	ld	a, (x)
+      0000D9 A4 CF            [ 1]  303 	and	a, #0xcf
+      0000DB F7               [ 1]  304 	ld	(x), a
+                                    305 ;	thermo.c: 66: USART1_BRR1 = 0x11; USART1_BRR2 = 0x6; // 57600 baud (use 8 B for 115200)
+      0000DC 35 11 52 32      [ 1]  306 	mov	0x5232+0, #0x11
+      0000E0 35 06 52 33      [ 1]  307 	mov	0x5233+0, #0x06
+      0000E4 81               [ 4]  308 	ret
+                                    309 ;	thermo.c: 69: int uartWrite(const char *str) {
+                                    310 ;	-----------------------------------------
+                                    311 ;	 function uartWrite
+                                    312 ;	-----------------------------------------
+      0000E5                        313 _uartWrite:
+      0000E5 52 03            [ 2]  314 	sub	sp, #3
+                                    315 ;	thermo.c: 71: for(i = 0; i < strlen(str); i++) {
+      0000E7 0F 01            [ 1]  316 	clr	(0x01, sp)
+      0000E9                        317 00106$:
+      0000E9 1E 06            [ 2]  318 	ldw	x, (0x06, sp)
+      0000EB 89               [ 2]  319 	pushw	x
+      0000EC CDr00r00         [ 4]  320 	call	_strlen
+      0000EF 5B 02            [ 2]  321 	addw	sp, #2
+      0000F1 1F 02            [ 2]  322 	ldw	(0x02, sp), x
+      0000F3 5F               [ 1]  323 	clrw	x
+      0000F4 7B 01            [ 1]  324 	ld	a, (0x01, sp)
+      0000F6 97               [ 1]  325 	ld	xl, a
+      0000F7 13 02            [ 2]  326 	cpw	x, (0x02, sp)
+      0000F9 24 17            [ 1]  327 	jrnc	00104$
+                                    328 ;	thermo.c: 72: while(!(USART1_SR & USART_SR_TXE));
+      0000FB                        329 00101$:
+      0000FB AE 52 30         [ 2]  330 	ldw	x, #0x5230
+      0000FE F6               [ 1]  331 	ld	a, (x)
+      0000FF 4D               [ 1]  332 	tnz	a
+      000100 2A F9            [ 1]  333 	jrpl	00101$
+                                    334 ;	thermo.c: 73: USART1_DR = str[i];
+      000102 5F               [ 1]  335 	clrw	x
+      000103 7B 01            [ 1]  336 	ld	a, (0x01, sp)
+      000105 97               [ 1]  337 	ld	xl, a
+      000106 72 FB 06         [ 2]  338 	addw	x, (0x06, sp)
+      000109 F6               [ 1]  339 	ld	a, (x)
+      00010A AE 52 31         [ 2]  340 	ldw	x, #0x5231
+      00010D F7               [ 1]  341 	ld	(x), a
+                                    342 ;	thermo.c: 71: for(i = 0; i < strlen(str); i++) {
+      00010E 0C 01            [ 1]  343 	inc	(0x01, sp)
+      000110 20 D7            [ 2]  344 	jra	00106$
+      000112                        345 00104$:
+                                    346 ;	thermo.c: 75: return(i); // Bytes sent
+      000112 5F               [ 1]  347 	clrw	x
+      000113 7B 01            [ 1]  348 	ld	a, (0x01, sp)
+      000115 97               [ 1]  349 	ld	xl, a
+      000116 5B 03            [ 2]  350 	addw	sp, #3
+      000118 81               [ 4]  351 	ret
+                                    352 ;	thermo.c: 78: void putchar(unsigned char data) {
+                                    353 ;	-----------------------------------------
+                                    354 ;	 function putchar
+                                    355 ;	-----------------------------------------
+      000119                        356 _putchar:
+                                    357 ;	thermo.c: 79: USART1_DR = data;
+      000119 AE 52 31         [ 2]  358 	ldw	x, #0x5231
+      00011C 7B 03            [ 1]  359 	ld	a, (0x03, sp)
+      00011E F7               [ 1]  360 	ld	(x), a
+                                    361 ;	thermo.c: 80: while (!(USART1_SR & USART_SR_TC));
+      00011F                        362 00101$:
+      00011F AE 52 30         [ 2]  363 	ldw	x, #0x5230
+      000122 F6               [ 1]  364 	ld	a, (x)
+      000123 A5 40            [ 1]  365 	bcp	a, #0x40
+      000125 27 F8            [ 1]  366 	jreq	00101$
+      000127 81               [ 4]  367 	ret
+                                    368 ;	thermo.c: 83: char uartRead() {
+                                    369 ;	-----------------------------------------
+                                    370 ;	 function uartRead
+                                    371 ;	-----------------------------------------
+      000128                        372 _uartRead:
+                                    373 ;	thermo.c: 84: if(USART1_SR & USART_SR_RXNE) {
+      000128 AE 52 30         [ 2]  374 	ldw	x, #0x5230
+      00012B F6               [ 1]  375 	ld	a, (x)
+      00012C A5 20            [ 1]  376 	bcp	a, #0x20
+      00012E 27 05            [ 1]  377 	jreq	00102$
+                                    378 ;	thermo.c: 85: return USART1_DR;
+      000130 AE 52 31         [ 2]  379 	ldw	x, #0x5231
+      000133 F6               [ 1]  380 	ld	a, (x)
+      000134 81               [ 4]  381 	ret
+      000135                        382 00102$:
+                                    383 ;	thermo.c: 87: return '\0';
+      000135 4F               [ 1]  384 	clr	a
+      000136 81               [ 4]  385 	ret
+                                    386 ;	thermo.c: 91: char* readUartBuffer() {
+                                    387 ;	-----------------------------------------
+                                    388 ;	 function readUartBuffer
+                                    389 ;	-----------------------------------------
+      000137                        390 _readUartBuffer:
+                                    391 ;	thermo.c: 92: uartBufferPos = 0;
+      000137 72 5Fu00u01      [ 1]  392 	clr	_uartBufferPos+0
+                                    393 ;	thermo.c: 93: return uartBuffer;
+      00013B AEr00r00         [ 2]  394 	ldw	x, #_uartBuffer+0
+      00013E 81               [ 4]  395 	ret
+                                    396 ;	thermo.c: 96: void clearUartBuffer() {
+                                    397 ;	-----------------------------------------
+                                    398 ;	 function clearUartBuffer
+                                    399 ;	-----------------------------------------
+      00013F                        400 _clearUartBuffer:
+                                    401 ;	thermo.c: 97: memset(uartBuffer,0,UART_BUFFER_SIZE);
+      00013F AEr00r00         [ 2]  402 	ldw	x, #_uartBuffer+0
+      000142 4B 20            [ 1]  403 	push	#0x20
+      000144 4B 00            [ 1]  404 	push	#0x00
+      000146 4B 00            [ 1]  405 	push	#0x00
+      000148 4B 00            [ 1]  406 	push	#0x00
+      00014A 89               [ 2]  407 	pushw	x
+      00014B CDr00r00         [ 4]  408 	call	_memset
+      00014E 5B 06            [ 2]  409 	addw	sp, #6
+      000150 81               [ 4]  410 	ret
+                                    411 ;	thermo.c: 101: void initADC() {
+                                    412 ;	-----------------------------------------
+                                    413 ;	 function initADC
+                                    414 ;	-----------------------------------------
+      000151                        415 _initADC:
+                                    416 ;	thermo.c: 102: ADC1_SQR1 |= ADC1_SQR1_DMAOFF; // disable DMA
+      000151 72 1E 53 4A      [ 1]  417 	bset	0x534a, #7
+                                    418 ;	thermo.c: 103: ADC1_SQR4 |= (1 << 5); // Select ADC 5 (PC3)
+      000155 AE 53 4D         [ 2]  419 	ldw	x, #0x534d
+      000158 F6               [ 1]  420 	ld	a, (x)
+      000159 AA 20            [ 1]  421 	or	a, #0x20
+      00015B F7               [ 1]  422 	ld	(x), a
+                                    423 ;	thermo.c: 104: ADC1_CR1 |= ADC1_CR1_ADON; // wake up
+      00015C 72 10 53 40      [ 1]  424 	bset	0x5340, #0
+      000160 81               [ 4]  425 	ret
+                                    426 ;	thermo.c: 108: uint16_t readADC() {
+                                    427 ;	-----------------------------------------
+                                    428 ;	 function readADC
+                                    429 ;	-----------------------------------------
+      000161                        430 _readADC:
+      000161 52 06            [ 2]  431 	sub	sp, #6
+                                    432 ;	thermo.c: 110: ADC1_CR1 |= ADC1_CR1_START; // start
+      000163 AE 53 40         [ 2]  433 	ldw	x, #0x5340
+      000166 F6               [ 1]  434 	ld	a, (x)
+      000167 AA 02            [ 1]  435 	or	a, #0x02
+      000169 F7               [ 1]  436 	ld	(x), a
+                                    437 ;	thermo.c: 111: while (!(ADC1_SR & ADC1_SR_EOC));
+      00016A                        438 00101$:
+      00016A AE 53 43         [ 2]  439 	ldw	x, #0x5343
+      00016D F6               [ 1]  440 	ld	a, (x)
+      00016E 44               [ 1]  441 	srl	a
+      00016F 24 F9            [ 1]  442 	jrnc	00101$
+                                    443 ;	thermo.c: 112: adcH = ADC1_DRH;
+      000171 AE 53 44         [ 2]  444 	ldw	x, #0x5344
+      000174 F6               [ 1]  445 	ld	a, (x)
+                                    446 ;	thermo.c: 113: adcL = ADC1_DRL;
+      000175 AE 53 45         [ 2]  447 	ldw	x, #0x5345
+      000178 88               [ 1]  448 	push	a
+      000179 F6               [ 1]  449 	ld	a, (x)
+      00017A 97               [ 1]  450 	ld	xl, a
+      00017B 84               [ 1]  451 	pop	a
+                                    452 ;	thermo.c: 115: return (adcL | (adcH << 8));
+      00017C 0F 05            [ 1]  453 	clr	(0x05, sp)
+      00017E 0F 04            [ 1]  454 	clr	(0x04, sp)
+      000180 0F 01            [ 1]  455 	clr	(0x01, sp)
+      000182 1A 01            [ 1]  456 	or	a, (0x01, sp)
+      000184 01               [ 1]  457 	rrwa	x
+      000185 1A 04            [ 1]  458 	or	a, (0x04, sp)
+      000187 97               [ 1]  459 	ld	xl, a
+      000188 5B 06            [ 2]  460 	addw	sp, #6
+      00018A 81               [ 4]  461 	ret
+                                    462 ;	thermo.c: 119: void initClock() {
+                                    463 ;	-----------------------------------------
+                                    464 ;	 function initClock
+                                    465 ;	-----------------------------------------
+      00018B                        466 _initClock:
+                                    467 ;	thermo.c: 120: CLK_CKDIVR = 0; // Set the frequency to 16 MHz
+      00018B 35 00 50 C0      [ 1]  468 	mov	0x50c0+0, #0x00
+                                    469 ;	thermo.c: 121: CLK_PCKENR1 = 0xFF; // Enable peripherals
+      00018F 35 FF 50 C3      [ 1]  470 	mov	0x50c3+0, #0xff
+                                    471 ;	thermo.c: 122: CLK_PCKENR2 = 0xFF;
+      000193 35 FF 50 C4      [ 1]  472 	mov	0x50c4+0, #0xff
+      000197 81               [ 4]  473 	ret
+                                    474 ;	thermo.c: 126: int main() {
+                                    475 ;	-----------------------------------------
+                                    476 ;	 function main
+                                    477 ;	-----------------------------------------
+      000198                        478 _main:
+      000198 52 02            [ 2]  479 	sub	sp, #2
+                                    480 ;	thermo.c: 127: initClock();
+      00019A CDr01r8B         [ 4]  481 	call	_initClock
+                                    482 ;	thermo.c: 129: enableInterrupts()
+      00019D 9A               [ 1]  483 	rim
+                                    484 ;	thermo.c: 131: initADC();
+      00019E CDr01r51         [ 4]  485 	call	_initADC
+                                    486 ;	thermo.c: 133: initUSART();
+      0001A1 CDr00rBC         [ 4]  487 	call	_initUSART
+                                    488 ;	thermo.c: 135: initMotor();
+      0001A4 CDr00r69         [ 4]  489 	call	_initMotor
+                                    490 ;	thermo.c: 137: printf("Thermostat: Startup complete\n");
+      0001A7 AEr02r5B         [ 2]  491 	ldw	x, #___str_0+0
+      0001AA 89               [ 2]  492 	pushw	x
+      0001AB CDr00r00         [ 4]  493 	call	_printf
+      0001AE 5B 02            [ 2]  494 	addw	sp, #2
+                                    495 ;	thermo.c: 140: while(true) {
+      0001B0                        496 00104$:
+                                    497 ;	thermo.c: 142: count++;
+      0001B0 C6u00u00         [ 1]  498 	ld	a, _count+0
+      0001B3 4C               [ 1]  499 	inc	a
+      0001B4 C7u00u00         [ 1]  500 	ld	_count+0, a
+                                    501 ;	thermo.c: 143: delay(1000);
+      0001B7 4B E8            [ 1]  502 	push	#0xe8
+      0001B9 4B 03            [ 1]  503 	push	#0x03
+      0001BB 5F               [ 1]  504 	clrw	x
+      0001BC 89               [ 2]  505 	pushw	x
+      0001BD CDr00r00         [ 4]  506 	call	_delay
+      0001C0 5B 04            [ 2]  507 	addw	sp, #4
+                                    508 ;	thermo.c: 144: printf("Loop start: %d \n", count);
+      0001C2 5F               [ 1]  509 	clrw	x
+      0001C3 C6u00u00         [ 1]  510 	ld	a, _count+0
+      0001C6 97               [ 1]  511 	ld	xl, a
+      0001C7 90 AEr02r79      [ 2]  512 	ldw	y, #___str_1+0
+      0001CB 89               [ 2]  513 	pushw	x
+      0001CC 90 89            [ 2]  514 	pushw	y
+      0001CE CDr00r00         [ 4]  515 	call	_printf
+      0001D1 5B 04            [ 2]  516 	addw	sp, #4
+                                    517 ;	thermo.c: 145: adc = readADC();
+      0001D3 CDr01r61         [ 4]  518 	call	_readADC
+      0001D6 1F 01            [ 2]  519 	ldw	(0x01, sp), x
+                                    520 ;	thermo.c: 146: printf("ADC value: %d, %d\n", adc, uartBufferPos);
+      0001D8 5F               [ 1]  521 	clrw	x
+      0001D9 C6u00u01         [ 1]  522 	ld	a, _uartBufferPos+0
+      0001DC 97               [ 1]  523 	ld	xl, a
+      0001DD 90 AEr02r8A      [ 2]  524 	ldw	y, #___str_2+0
+      0001E1 89               [ 2]  525 	pushw	x
+      0001E2 1E 03            [ 2]  526 	ldw	x, (0x03, sp)
+      0001E4 89               [ 2]  527 	pushw	x
+      0001E5 90 89            [ 2]  528 	pushw	y
+      0001E7 CDr00r00         [ 4]  529 	call	_printf
+      0001EA 5B 06            [ 2]  530 	addw	sp, #6
+                                    531 ;	thermo.c: 147: if (adc < 2000)
+      0001EC 1E 01            [ 2]  532 	ldw	x, (0x01, sp)
+      0001EE A3 07 D0         [ 2]  533 	cpw	x, #0x07d0
+      0001F1 24 0A            [ 1]  534 	jrnc	00102$
+                                    535 ;	thermo.c: 149: dir = !dir;
+      0001F3 C6u00u02         [ 1]  536 	ld	a, _dir+0
+      0001F6 A0 01            [ 1]  537 	sub	a, #0x01
+      0001F8 4F               [ 1]  538 	clr	a
+      0001F9 49               [ 1]  539 	rlc	a
+      0001FA C7u00u02         [ 1]  540 	ld	_dir+0, a
+      0001FD                        541 00102$:
+                                    542 ;	thermo.c: 151: setMotor(dir, !dir);
+      0001FD C6u00u02         [ 1]  543 	ld	a, _dir+0
+      000200 A0 01            [ 1]  544 	sub	a, #0x01
+      000202 4F               [ 1]  545 	clr	a
+      000203 49               [ 1]  546 	rlc	a
+      000204 88               [ 1]  547 	push	a
+      000205 3Bu00u02         [ 1]  548 	push	_dir+0
+      000208 CDr00r94         [ 4]  549 	call	_setMotor
+      00020B 5B 02            [ 2]  550 	addw	sp, #2
+                                    551 ;	thermo.c: 152: printf("%s\n", readUartBuffer());
+      00020D CDr01r37         [ 4]  552 	call	_readUartBuffer
+      000210 90 AEr02r9D      [ 2]  553 	ldw	y, #___str_3+0
+      000214 89               [ 2]  554 	pushw	x
+      000215 90 89            [ 2]  555 	pushw	y
+      000217 CDr00r00         [ 4]  556 	call	_printf
+      00021A 5B 04            [ 2]  557 	addw	sp, #4
+                                    558 ;	thermo.c: 153: clearUartBuffer();
+      00021C CDr01r3F         [ 4]  559 	call	_clearUartBuffer
+      00021F 20 8F            [ 2]  560 	jra	00104$
+      000221 5B 02            [ 2]  561 	addw	sp, #2
+      000223 81               [ 4]  562 	ret
+                                    563 ;	thermo.c: 162: void uart_isr() __interrupt(UART_RECV_ISR) {
+                                    564 ;	-----------------------------------------
+                                    565 ;	 function uart_isr
+                                    566 ;	-----------------------------------------
+      000224                        567 _uart_isr:
+      000224 4F               [ 1]  568 	clr	a
+      000225 62               [ 2]  569 	div	x, a
+      000226 52 03            [ 2]  570 	sub	sp, #3
+                                    571 ;	thermo.c: 164: uartBufferPos %= UART_BUFFER_SIZE-1;
+      000228 5F               [ 1]  572 	clrw	x
+      000229 C6u00u01         [ 1]  573 	ld	a, _uartBufferPos+0
+      00022C 97               [ 1]  574 	ld	xl, a
+      00022D A6 1F            [ 1]  575 	ld	a, #0x1f
+      00022F 62               [ 2]  576 	div	x, a
+                                    577 ;	thermo.c: 165: for(i = uartBufferPos; i < UART_BUFFER_SIZE; i++) {
+      000230 C7u00u01         [ 1]  578 	ld	_uartBufferPos+0, a
+      000233 AEr00r00         [ 2]  579 	ldw	x, #_uartBuffer+0
+      000236 1F 02            [ 2]  580 	ldw	(0x02, sp), x
+      000238 6B 01            [ 1]  581 	ld	(0x01, sp), a
+      00023A                        582 00103$:
+      00023A 7B 01            [ 1]  583 	ld	a, (0x01, sp)
+      00023C A1 20            [ 1]  584 	cp	a, #0x20
+      00023E 24 11            [ 1]  585 	jrnc	00101$
+                                    586 ;	thermo.c: 166: uartBuffer[i] = uartRead();
+      000240 5F               [ 1]  587 	clrw	x
+      000241 7B 01            [ 1]  588 	ld	a, (0x01, sp)
+      000243 97               [ 1]  589 	ld	xl, a
+      000244 72 FB 02         [ 2]  590 	addw	x, (0x02, sp)
+      000247 89               [ 2]  591 	pushw	x
+      000248 CDr01r28         [ 4]  592 	call	_uartRead
+      00024B 85               [ 2]  593 	popw	x
+      00024C F7               [ 1]  594 	ld	(x), a
+                                    595 ;	thermo.c: 165: for(i = uartBufferPos; i < UART_BUFFER_SIZE; i++) {
+      00024D 0C 01            [ 1]  596 	inc	(0x01, sp)
+      00024F 20 E9            [ 2]  597 	jra	00103$
+      000251                        598 00101$:
+                                    599 ;	thermo.c: 168: uartBufferPos++;
+      000251 C6u00u01         [ 1]  600 	ld	a, _uartBufferPos+0
+      000254 4C               [ 1]  601 	inc	a
+      000255 C7u00u01         [ 1]  602 	ld	_uartBufferPos+0, a
+      000258 5B 03            [ 2]  603 	addw	sp, #3
+      00025A 80               [11]  604 	iret
+                                    605 	.area CODE
+      00025B                        606 ___str_0:
+      00025B 54 68 65 72 6D 6F 73   607 	.ascii "Thermostat: Startup complete"
+             74 61 74 3A 20 53 74
+             61 72 74 75 70 20 63
+             6F 6D 70 6C 65 74 65
+      000277 0A                     608 	.db 0x0a
+      000278 00                     609 	.db 0x00
+      000279                        610 ___str_1:
+      000279 4C 6F 6F 70 20 73 74   611 	.ascii "Loop start: %d "
+             61 72 74 3A 20 25 64
+             20
+      000288 0A                     612 	.db 0x0a
+      000289 00                     613 	.db 0x00
+      00028A                        614 ___str_2:
+      00028A 41 44 43 20 76 61 6C   615 	.ascii "ADC value: %d, %d"
+             75 65 3A 20 25 64 2C
+             20 25 64
+      00029B 0A                     616 	.db 0x0a
+      00029C 00                     617 	.db 0x00
+      00029D                        618 ___str_3:
+      00029D 25 73                  619 	.ascii "%s"
+      00029F 0A                     620 	.db 0x0a
+      0002A0 00                     621 	.db 0x00
+                                    622 	.area INITIALIZER
+      000000                        623 __xinit__count:
+      000000 00                     624 	.db #0x00	; 0
+      000001                        625 __xinit__uartBufferPos:
+      000001 00                     626 	.db #0x00	; 0
+      000002                        627 __xinit__dir:
+      000002 00                     628 	.db #0x00	;  0
+                                    629 	.area CABS (ABS)
