@@ -135,25 +135,21 @@ int main() {
         initMotor();
 
         printf("Thermostat: Startup complete\n");
-        //readADC();
 
         while(true) {
             uint16_t adc;
-            count++;
-            delay(1000);
-            printf("Loop start: %d \n", count);
+
+            delay(100);
+
             adc = readADC();
-            printf("ADC value: %d, %d\n", adc, uartBufferPos);
-            if (adc < 2000)
-            {
-                dir = !dir;
+            printf("ADC value: %d, %d\n", readADC(), uartBufferPos);
+
+            if (count > 0) {
+              setMotor(dir, !dir);
+              count--;
+            } else {
+              setMotor(0, 0);
             }
-            setMotor(dir, !dir);
-            printf("%s\n", readUartBuffer());
-            clearUartBuffer();
-            //sprintf(str, "Zahln: %d %s %c %c", someInt, "Hallo", '!', '\n');
-
-
         }
     }
 
